@@ -28,5 +28,37 @@ export async function checkTypo(input: CheckTypoInput): Promise<CheckTypoOutput>
 }
 
 // REPLACE ME PART 1: add prompt here
+const prompt = ai.definePrompt({
+  name: 'checkTypoPrompt',
+  input: {
+    schema: CheckTypoInputSchema,
+  },
+  output: {
+    schema: CheckTypoOutputSchema,
+  },
+  prompt: `You are a helpful AI assistant that checks user text for typos and suggests corrections.
+- If you find typos, respond with the corrected text.
+- If there are no typos, or if you are unsure about a correction, respond with the original text unchanged.
+
+User text: {text}
+
+Corrected text:
+`,
+});
 
 // REPLACE ME PART 2: add flow here
+
+const checkTypoFlow = ai.defineFlow<
+  typeof CheckTypoInputSchema,
+  typeof CheckTypoOutputSchema
+>(
+  {
+    name: 'checkTypoFlow',
+    inputSchema: CheckTypoInputSchema,
+    outputSchema: CheckTypoOutputSchema,
+  },
+  async input => {
+    const {output} = await prompt(input);
+    return output!;
+  }
+);

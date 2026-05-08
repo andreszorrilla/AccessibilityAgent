@@ -1,10 +1,10 @@
 'use server';
 /**
- * @fileOverview This file defines a Genkit flow to identify the dominant colors in an image.
+ * @fileOverview Este archivo define un flujo de Genkit para identificar los colores dominantes en una imagen.
  *
- * - identifyDominantColors - A function that takes an image data URI and returns a list of dominant colors.
- * - IdentifyDominantColorsInput - The input type for the identifyDominantColors function.
- * - IdentifyDominantColorsOutput - The return type for the identifyDominantColors function.
+ * - identifyDominantColors - Una función que toma un URI de datos de imagen y devuelve una lista de colores dominantes.
+ * - IdentifyDominantColorsInput - El tipo de entrada para la función identifyDominantColors.
+ * - IdentifyDominantColorsOutput - El tipo de retorno para la función identifyDominantColors.
  */
 
 import {ai} from '@/ai/ai-instance';
@@ -14,13 +14,13 @@ const IdentifyDominantColorsInputSchema = z.object({
   photoDataUri: z
     .string()
     .describe(
-      "A photo, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+      "Una foto, como un URI de datos que debe incluir un tipo MIME y usar codificación Base64. Formato esperado: 'data:<mimetype>;base64,<encoded_data>'."
     ),
 });
 export type IdentifyDominantColorsInput = z.infer<typeof IdentifyDominantColorsInputSchema>;
 
 const IdentifyDominantColorsOutputSchema = z.object({
-  dominantColors: z.array(z.string()).describe('A list of dominant colors in the image.'),
+  dominantColors: z.array(z.string()).describe('Una lista de los colores dominantes en la imagen.'),
 });
 export type IdentifyDominantColorsOutput = z.infer<typeof IdentifyDominantColorsOutputSchema>;
 
@@ -35,20 +35,20 @@ const prompt = ai.definePrompt({
       photoDataUri: z
         .string()
         .describe(
-          "A photo, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+          "Una foto, como un URI de datos que debe incluir un tipo MIME y usar codificación Base64. Formato esperado: 'data:<mimetype>;base64,<encoded_data>'."
         ),
     }),
   },
   output: {
     schema: z.object({
-      dominantColors: z.array(z.string()).describe('A list of dominant colors in the image.'),
+      dominantColors: z.array(z.string()).describe('Una lista de los colores dominantes en la imagen.'),
     }),
   },
-  prompt: `You are an AI assistant that analyzes images and identifies the dominant colors.
+  prompt: `Eres un asistente de IA que analiza imágenes e identifica los colores dominantes.
 
-  Analyze the image provided and identify the dominant colors present. Return a list of these colors.
+  Analiza la imagen proporcionada e identifica los colores dominantes presentes. Devuelve una lista con estos colores.
 
-  Image: {{media url=photoDataUri}}
+  Imagen: {{media url=photoDataUri}}
   `,
 });
 

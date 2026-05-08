@@ -3,32 +3,105 @@
 import { ai } from '@/ai/ai-instance';
 import { z } from 'zod';
 
-// Define the possible intent categories
+// Definición de las categorías de intención posibles
+export type IntentCategory =
+  // Intenciones de Análisis de Imagen
+  | "DescribeImage"
+  | "AskAboutImage"
+  | "ReadTextInImage"
+  | "IdentifyColorsInImage"
 
-// REPLACE ME PART 1: add IntentCategory here
+  // Intenciones de Control
+  | "TakePicture"
+  | "StartCamera"
+  | "SelectImage"
+  | "StopSpeaking"
 
-// 1. Define Input Schema (Remains the same)
+  // Intenciones de Preferencias
+  | "SetDescriptionDetailed"
+  | "SetDescriptionConcise"
+
+  // Intenciones de Respaldo
+  | "GeneralInquiry"       // Preguntas generales sobre funciones o interacción social
+  | "OutOfScopeRequest"    // Fuera de las capacidades definidas
+  | "Unknown";             // No se pudo determinar
+
+// 1. Definición del Esquema de Entrada
 const ClassifyIntentInputSchema = z.object({
-  userQuery: z.string().describe("The user's query to classify."),
+  userQuery: z.string().describe("La consulta del usuario a clasificar."),
 });
 export type ClassifyIntentInput = z.infer<typeof ClassifyIntentInputSchema>;
 
-// 2. Define Output Schema
+// 2. Definición del Esquema de Salida
 const ClassifyIntentOutputSchema = z.object({
-  intent: z.string().describe("The classified intent category. Should be one of: DescribeImage, AskAboutImage, ReadTextInImage, IdentifyColorsInImage, TakePicture, StartCamera, SelectImage, StopSpeaking, SetDescriptionDetailed, SetDescriptionConcise, GeneralInquiry, OutOfScopeRequest."),
+  intent: z.string().describe("Categoría de intención clasificada. Debe ser una de: DescribeImage, AskAboutImage, ReadTextInImage, IdentifyColorsInImage, TakePicture, StartCamera, SelectImage, StopSpeaking, SetDescriptionDetailed, SetDescriptionConcise, GeneralInquiry, OutOfScopeRequest."),
 });
 export type ClassifyIntentOutput = z.infer<typeof ClassifyIntentOutputSchema>;
 
-// Define Agent Capabilities and Limitations for the prompt
+// Capacidades y Limitaciones del Agente para el prompt
+const AGENT_CAPABILITIES_AND_LIMITATIONS = `
+**Capacidades Principales (Lo que el Agente PUEDE HACER):**
+* **Análisis de Imagen:**
+    * DescribeImage: Proporcionar una descripción general de la imagen actual.
+    * AskAboutImage: Responder preguntas específicas sobre el contenido visual (ej. "¿Hay un perro?", "¿De qué color es el coche?").
+    * ReadTextInImage: Leer cualquier texto encontrado en la imagen.
+    * IdentifyColorsInImage: Identificar los colores dominantes.
+* **Control de Entrada de Imagen:**
+    * TakePicture: Capturar una foto usando la cámara activa.
+    * StartCamera: Activar la cámara (ej. "usa la cámara", "toma otra foto").
+    * SelectImage: Permitir al usuario elegir un archivo de imagen de su dispositivo.
+* **Control de Voz y Audio:**
+    * StopSpeaking: Detener la salida de voz actual (texto a voz).
+* **Gestión de Preferencias:**
+    * SetDescriptionDetailed: Hacer que las descripciones futuras sean más detalladas.
+    * SetDescriptionConcise: Hacer que las descripciones futuras sean más breves o concisas.
+* **Interacción General:**
+    * GeneralInquiry: Manejar frases de cortesía (ej. "hola", "gracias") o preguntas sobre sus propias funciones (ej. "¿qué puedes hacer?", "ayuda").
 
-// REPLACE ME PART 2: add AGENT_CAPABILITIES_AND_LIMITATIONS here
+**Limitaciones (Lo que el Agente NO PUEDE HACER y debe clasificarse como OutOfScopeRequest):**
+* No puede generar ni crear imágenes nuevas.
+* No puede editar ni modificar imágenes (ej. "quita el fondo", "pon el coche azul").
+* No puede analizar videos ni transmisiones en vivo más allá de capturar un fotograma.
+* No puede responder preguntas de cultura general no relacionadas con la imagen.
+`;
+
+// 3. Definición del Prompt (Optimizado con Few-Shot y Reglas de Prioridad)
+const classifyIntentPrompt = ai.definePrompt({
+  name: 'classifyIntentPrompt',
+  input: { schema: ClassifyIntentInputSchema },
+  output: { schema: ClassifyIntentOutputSchema },
+  config: {
+    temperature: 0, // Determinismo absoluto para evitar GeneralInquiry por error
+  },
+  prompt: `Eres el motor de clasificación de intenciones de ClarityCam. Tu misión es mapear la consulta a una acción técnica.
+
+### REGLAS DE DECISIÓN:
+1. **DescribeImage**: Úsala cuando el usuario pida una descripción general, pregunte "qué hay", "qué ves" o pida "características" sin especificar un objeto concreto.
+2. **IdentifyColorsInImage**: Úsala SOLO si la consulta menciona explícitamente "color", "colores", "tonos" o "paleta".
+3. **Prioridad Técnica**: Si hay un saludo ("hola") seguido de una orden, ignora el saludo y clasifica la orden.
+4. **Comandos Cortos**: Palabras sueltas como "color" o "lee" son instrucciones técnicas, no consultas generales.
+
+### EJEMPLOS DE REFERENCIA:
+- "dime qué hay en la imagen" -> DescribeImage
+- "qué ves" -> DescribeImage
+- "qué colores tiene la imagen" -> IdentifyColorsInImage
+- "color" -> IdentifyColorsInImage
+- "¿qué dice aquí?" -> ReadTextInImage
+- "¿hay un perro?" -> AskAboutImage
+- "hola" -> GeneralInquiry
+- "¿Hay un hombre en la imagen?" -> AskAboutImage (Específico: hombre)
+- "¿Qué está haciendo el gato?" -> AskAboutImage (Específico: gato)
 
 
-// 3. Define the Prompt
+### CAPACIDADES DEL AGENTE:
+${AGENT_CAPABILITIES_AND_LIMITATIONS}
 
-// REPLACE ME PART 3 - classifyIntentPrompt
+### CONSULTA DEL USUARIO:
+'{userQuery}'`,
+});
 
-// 4. Define the Flow
+
+// 4. Definición del Flujo
 export const classifyIntentFlow = ai.defineFlow<
   typeof ClassifyIntentInputSchema,
   typeof ClassifyIntentOutputSchema
@@ -39,17 +112,14 @@ export const classifyIntentFlow = ai.defineFlow<
     outputSchema: ClassifyIntentOutputSchema,
   },
   async (input) => {
-    console.log(`Attempting to classify intent for query: "${input.userQuery}"`);
     if (!input.userQuery || input.userQuery.trim() === "") {
-        console.warn("Cannot classify empty query.");
-        return { intent: "Unknown" }; // Or "GeneralInquiry" if you prefer for empty
+        return { intent: "Unknown" };
     }
 
     try {
       const { output } = await classifyIntentPrompt(input);
 
       if (!output || !output.intent) {
-          console.error("Intent classification prompt did not return valid output for query:", input.userQuery);
           return { intent: "Unknown" };
       }
 
@@ -58,20 +128,17 @@ export const classifyIntentFlow = ai.defineFlow<
           "TakePicture", "StartCamera", "SelectImage", "StopSpeaking",
           "SetDescriptionDetailed", "SetDescriptionConcise",
           "GeneralInquiry", "OutOfScopeRequest",
-          // "Unknown" is a possible outcome but not a category the LLM should target directly in the happy path.
       ];
 
       if (validCategories.includes(output.intent)) {
-          console.log(`Query: "${input.userQuery}" successfully classified as Intent: ${output.intent}`);
+          console.log(`Clasificado como: ${output.intent}`);
           return { intent: output.intent };
       } else {
-          // This case means the LLM returned something not in our explicit validCategories list.
-          // This is different from it *choosing* "Unknown" from the prompt instructions.
-          console.warn(`AI returned an unexpected or invalid category string: "${output.intent}" for query: "${input.userQuery}". Defaulting to 'Unknown'.`);
+          console.warn(`Categoría inválida devuelta por el modelo: "${output.intent}".`);
           return { intent: "Unknown" };
       }
     } catch (error) {
-      console.error(`Error during intent classification flow for query "${input.userQuery}":`, error);
+      console.error(`Error en el flujo de clasificación:`, error);
       return { intent: "Unknown" };
     }
   }

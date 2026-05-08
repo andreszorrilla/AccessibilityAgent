@@ -101,7 +101,7 @@ export default function SightGuide() {
         setImageFile(null);
         setAnalysisResult(null);
         setCustomQuestion("");
-        speakText("Camera started. Say 'Take picture' or press the capture button.");
+        speakText("Cámara iniciada. Di 'tomar foto' o presiona el botón de captura.");
       }
     } catch (err) {
       console.error("Error accessing camera:", err);
@@ -129,7 +129,7 @@ export default function SightGuide() {
         video.style.display = "none";
         setAnalysisResult(null);
         setCustomQuestion("");
-        if (!isListening) speakText("Picture taken.");
+        if (!isListening) speakText("Foto tomada.");
       }
     } else {
         if (!isListening) speakText("Camera not active to take picture."); // Corrected feedback
@@ -180,6 +180,15 @@ export default function SightGuide() {
 
         // REPLACE ME PART 2: DESCRIBE IMAGE
 
+        case "description":
+          result = await describeImage({ 
+            photoDataUri, 
+            question, 
+            detailPreference: descriptionPreference 
+          });
+          outputText = question ? `Answer: ${result.description}` : `Description: ${result.description}`;
+          break;
+
         // REPLACE ME PART 3: READ TEXT
 
         case "colors":
@@ -228,7 +237,16 @@ export default function SightGuide() {
         console.log("Checking for typos in command:", rawCommand);
 
         // REPLACE ME PART 2: add typoResult here
-        
+
+        const typoResult = await checkTypo({ text: rawCommand });
+        if (typoResult && typoResult.correctedText && typoResult.correctedText.trim().length > 0) {
+            const originalTrimmedLower = rawCommand.trim().toLowerCase();
+            const correctedTrimmedLower = typoResult.correctedText.trim().toLowerCase();
+            if (correctedTrimmedLower !== originalTrimmedLower) {
+                commandToProcess = typoResult.correctedText;
+                typoCorrectionAnnouncement = `I think you said: ${commandToProcess}. `;
+            }
+        }
     } catch (typoError: any) {
         console.error("Error checking for typos:", typoError);
         toast({ title: "Typo Check Error", description: "Proceeding with original command.", variant: "default" });
@@ -237,23 +255,24 @@ export default function SightGuide() {
     console.log("Command to process (after typo):", commandToProcess);
     setIsProcessing(true);
     setAnalysisResult("Understanding...");
-    speakText(typoCorrectionAnnouncement + "Okay, one moment...");
+    speakText(typoCorrectionAnnouncement + "Ok, un momento...");
 
     let intent: IntentCategory = "Unknown";
     try {
         // REPLACE ME PART 1: add classificationResult
+        console.log(`Recibiendo "${commandToProcess}"`);
+
         const classificationResult = await classifyIntentFlow({ userQuery: commandToProcess });
         intent = classificationResult.intent as IntentCategory;
         console.log(`Classified intent for "${commandToProcess}": ${intent}`);
     } catch (classificationError) {
         console.error("Error during intent classification:", classificationError);
-        speakText("Sorry, I had trouble understanding your request. Please try again.");
+        speakText("Perdon, Tengo un problema entiendo tu pedido. Intenta de nuevo.");
         setAnalysisResult("Failed to understand command.");
         setIsProcessing(false);
         return;
     }
-    const capabilitiesMessage = "I can help you describe images, read text from them, identify colors, take pictures, or select an image file. You can also ask me to make descriptions more or less detailed.";
-
+    const capabilitiesMessage = "Puedo ayudarte a describir imágenes, leer texto en ellas, identificar colores, tomar fotos o seleccionar un archivo de imagen. También puedes pedirme que haga las descripciones más o menos detalladas.";
 
     switch (intent) {
         case "TakePicture":
@@ -341,11 +360,11 @@ export default function SightGuide() {
                         break;
                     case "ReadTextInImage":
                         const textResult = await readTextInImage({ photoDataUri });
-                        outputText = textResult.text ? `Text Found: ${textResult.text}` : "No text found in the image.";
+                        outputText = textResult.text ? `Texto encontrado: ${textResult.text}` : "No hay texto en la imagen.";
                         break;
                     case "IdentifyColorsInImage":
                         const colorResult = await identifyDominantColors({ photoDataUri });
-                        outputText = colorResult.dominantColors?.length ? `Dominant Colors: ${colorResult.dominantColors.join(', ')}` : "Could not identify dominant colors.";
+                        outputText = colorResult.dominantColors?.length ? `Colores dominantes: ${colorResult.dominantColors.join(', ')}` : "No se pudo identificar colores dominantes.";
                         break;
                 }
                 setAnalysisResult(outputText);
@@ -368,15 +387,19 @@ export default function SightGuide() {
             // speakText("I can help you understand images. For example, you can ask me to describe an image, read text from it, or change how detailed the descriptions are. What would you like to do?");
             // setAnalysisResult("How can I assist you with an image today? You can also say 'make descriptions detailed' or 'make descriptions concise'.");
             // setIsProcessing(false);
-            speakText(`I can help you understand images. ${capabilitiesMessage} What would you like to do?`);
-            setAnalysisResult(`How can I assist you with an image today? You can also say 'make descriptions detailed' or 'make descriptions concise'.`);
+
+            speakText(`Puedo ayudarte a entender imágenes. ${capabilitiesMessage} ¿Qué te gustaría hacer?`);
+            setAnalysisResult(
+              `¿Cómo puedo ayudarte con una imagen hoy? También puedes decir 'hacer descripciones más detalladas' o 'hacer descripciones más concisas'.`
+            );
+
             setIsProcessing(false);
             break;
 
         case "OutOfScopeRequest":
             console.warn(`Out-of-scope request: "${commandToProcess}"`);
-            speakText(`I'm sorry, I can't help with that. ${capabilitiesMessage}`);
-            setAnalysisResult(`That request is outside my capabilities. ${capabilitiesMessage}`);
+            speakText(`Lo siento, Esto esta fuera de mi alcance. ${capabilitiesMessage}`);
+            setAnalysisResult(`Este pedido esta fuera de mi alcance. ${capabilitiesMessage}`);
             setIsProcessing(false);
             break;
 
@@ -384,8 +407,8 @@ export default function SightGuide() {
         default:
             const rawIntentString = intent; // Use the direct string from classification output
             console.warn(`Unhandled or Unknown intent: '${rawIntentString}' for command: ${commandToProcess}`);
-            speakText(`Sorry, I'm not quite sure how to help with that. ${capabilitiesMessage}`);
-            setAnalysisResult(`Command not fully understood. ${capabilitiesMessage}`);
+            speakText(`Lo siento, no estoy seguro de como te ayudo con esto. ${capabilitiesMessage}`);
+            setAnalysisResult(`Commando desconocido. ${capabilitiesMessage}`);
             setIsProcessing(false);
             break;
             // console.warn(`Unhandled or Unknown intent: ${intent} for command: ${commandToProcess}`);
@@ -529,7 +552,7 @@ export default function SightGuide() {
         const instance = new SpeechRecognitionAPI();
         instance.continuous = true; // Keep true for intended continuous listening
         instance.interimResults = false;
-        instance.lang = 'en-US';
+        instance.lang = 'es-419';
         recognitionRef.current = instance;
         console.log("SpeechRecognition instance created and configured.");
       } catch (error) {
@@ -669,7 +692,7 @@ export default function SightGuide() {
             ) : !videoRef.current?.srcObject && (
               <div className="text-center text-muted-foreground p-4">
                 <Camera size={64} className="mx-auto mb-4" />
-                <p>Use controls or voice commands to add an image.</p>
+                <p>Usa controles or comandos de voz para agregar una imagen.</p>
               </div>
             )}
           </CardContent>
