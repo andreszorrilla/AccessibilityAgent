@@ -42,7 +42,7 @@ export type ClassifyIntentOutput = z.infer<typeof ClassifyIntentOutputSchema>;
 const AGENT_CAPABILITIES_AND_LIMITATIONS = `
 **Capacidades Principales (Lo que el Agente PUEDE HACER):**
 * **Análisis de Imagen:**
-    * DescribeImage: Proporcionar una descripción general de la imagen actual.
+    * DescribeImage: Proporcionar una descripción general (solo si no se pide algo específico como colores o texto).
     * AskAboutImage: Responder preguntas específicas sobre el contenido visual (ej. "¿Hay un perro?", "¿De qué color es el coche?").
     * ReadTextInImage: Leer cualquier texto encontrado en la imagen.
     * IdentifyColorsInImage: Identificar los colores dominantes.
@@ -75,22 +75,43 @@ const classifyIntentPrompt = ai.definePrompt({
   },
   prompt: `Eres el motor de clasificación de intenciones de ClarityCam. Tu misión es mapear la consulta a una acción técnica.
 
+### REGLAS DE PRIORIDAD CRÍTICA:
+1. **IdentifyColorsInImage**: Si la consulta contiene las palabras "color", "colores", "tonos" o "paleta", CLASIFICA AQUÍ SIEMPRE, incluso si dice "qué ves".
+   - *MAL:* "qué colores ves" -> DescribeImage (Incorrecto)
+   - *BIEN:* "qué colores ves" -> IdentifyColorsInImage (Correcto)
+
+2. **ReadTextInImage**: Si la consulta menciona "leer", "texto", "dice", "letras" o "palabras".
+3. **AskAboutImage**: Si el usuario pregunta por un OBJETO, SUJETO o ACCIÓN específica (ej: perro, coche, persona, qué hace X).4. **DescribeImage**: Úsala cuando el usuario pida una descripción general, use el verbo "describir", 
+pregunte "qué hay", "qué ves" o "qué observas", siempre que NO mencione colores o texto específicamente.
+4. **DescribeImage**: Úsala cuando el usuario pida una descripción general, use el verbo "describir", pregunte "qué hay", "qué ves" o "qué observas", siempre que NO mencione colores o texto específicamente.
+   - *EJEMPLO:* "podrías describir esta imagen" -> **DescribeImage** (Correcto)
+5. **TakePicture**: Úsala cuando el usuario dé una orden directa de captura inmediata o mencione el acto de "sacar", "hacer" o "disparar" una foto (ej. "dispara", "toma la foto", "captura", "haz la foto ahora"). 
+   *Nota: Diferénciala de StartCamera (que solo abre la cámara) porque TakePicture implica ejecutar la captura.*
+4. **StartCamera (ESTADO)**: Órdenes de activar o poner la cámara: "activa la cámara", "pon la cámara", "abre la cámara", "usa la cámara", "quiero ver", "iniciar camara".
+
 ### REGLAS DE DECISIÓN:
-1. **DescribeImage**: Úsala cuando el usuario pida una descripción general, pregunte "qué hay", "qué ves" o pida "características" sin especificar un objeto concreto.
-2. **IdentifyColorsInImage**: Úsala SOLO si la consulta menciona explícitamente "color", "colores", "tonos" o "paleta".
+1. **IdentifyColorsInImage (PRIORIDAD ALTA)**: Úsala SOLO si la consulta menciona explícitamente "color", "colores", "tonos" o "paleta".
+2. **DescribeImage**: Úsala cuando el usuario pida una descripción general, pregunte "qué hay", "qué ves" o pida "características" sin especificar un objeto concreto.
 3. **Prioridad Técnica**: Si hay un saludo ("hola") seguido de una orden, ignora el saludo y clasifica la orden.
 4. **Comandos Cortos**: Palabras sueltas como "color" o "lee" son instrucciones técnicas, no consultas generales.
 
 ### EJEMPLOS DE REFERENCIA:
 - "dime qué hay en la imagen" -> DescribeImage
 - "qué ves" -> DescribeImage
-- "qué colores tiene la imagen" -> IdentifyColorsInImage
+- "¿qué colores ves?" -> IdentifyColorsInImage (Específico: color)
+- "dime los colores" -> IdentifyColorsInImage
 - "color" -> IdentifyColorsInImage
 - "¿qué dice aquí?" -> ReadTextInImage
 - "¿hay un perro?" -> AskAboutImage
 - "hola" -> GeneralInquiry
 - "¿Hay un hombre en la imagen?" -> AskAboutImage (Específico: hombre)
 - "¿Qué está haciendo el gato?" -> AskAboutImage (Específico: gato)
+
+### INSTRUCCIÓN DE DESAMBIGUACIÓN:
+Si el usuario pregunta "qué ves" + [ATRIBUTO ESPECÍFICO], clasifica siempre según el atributo específico. 
+- "Qué ves" + "texto" = ReadTextInImage
+- "Qué ves" + "colores" = IdentifyColorsInImage
+- "Qué ves" a secas = DescribeImage
 
 
 ### CAPACIDADES DEL AGENTE:

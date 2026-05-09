@@ -59,7 +59,7 @@ export default function SightGuide() {
           console.log(`Speech synthesis ${event.error} (expected).`);
       } else {
           console.error('Speech synthesis error:', event.error);
-          toast({ title: "Speech Error", description: `Could not speak. Error: ${event.error}`, variant: "destructive" });
+          toast({ title: "Error de voz", description: `No se pudo reproducir la voz. Error: ${event.error}`, variant: "destructive" });
       }
       setIsSpeaking(false);
     };
@@ -105,8 +105,8 @@ export default function SightGuide() {
       }
     } catch (err) {
       console.error("Error accessing camera:", err);
-       toast({ title: "Camera Error", description: "Could not access camera.", variant: "destructive" });
-       speakText("Error: Could not access camera.");
+       toast({ title: "Error de cámara", description: "No se pudo acceder a la cámara.", variant: "destructive" });
+       speakText("Error: no se pudo acceder a la cámara.");
     }
   };
 
@@ -132,8 +132,8 @@ export default function SightGuide() {
         if (!isListening) speakText("Foto tomada.");
       }
     } else {
-        if (!isListening) speakText("Camera not active to take picture."); // Corrected feedback
-        toast({ title: "Camera Not Active", description: "Start camera first.", variant: "destructive" });
+        if (!isListening) speakText("La cámara no está activa para tomar una foto.");
+        toast({ title: "Cámara no activa", description: "Primero inicia la cámara.", variant: "destructive" });
     }
   };
 
@@ -148,9 +148,9 @@ export default function SightGuide() {
                    reader.readAsDataURL(imageFile);
                });
            } catch (error) {
-               const msg = "Failed to read image file.";
+               const msg = "No se pudo leer el archivo de imagen.";
                setAnalysisResult(msg);
-               toast({ title: "File Error", description: msg, variant: "destructive" });
+               toast({ title: "Error de archivo", description: msg, variant: "destructive" });
                speakText(msg);
                return null; // Return null directly here
            }
@@ -165,8 +165,8 @@ export default function SightGuide() {
      const photoDataUri = await getImageDataUri();
      if (!photoDataUri) {
         if (!imageSrc && !imageFile) {
-            const msg = "Please select or capture an image first.";
-            toast({ title: "No Image", description: msg, variant: "destructive" });
+            const msg = "Por favor selecciona o captura una imagen primero.";
+            toast({ title: "Sin imagen", description: msg, variant: "destructive" });
             speakText(msg);
         }
         setAnalysisResult(null);
@@ -186,19 +186,19 @@ export default function SightGuide() {
             question, 
             detailPreference: descriptionPreference 
           });
-          outputText = question ? `Answer: ${result.description}` : `Description: ${result.description}`;
+          outputText = question ? `Respuesta: ${result.description}` : `Descripción: ${result.description}`;
           break;
 
         // REPLACE ME PART 3: READ TEXT
 
         case "colors":
             const colorResult = await identifyDominantColors({ photoDataUri });
-            outputText = colorResult.dominantColors?.length ? `Dominant Colors: ${colorResult.dominantColors.join(', ')}` : "Could not identify colors.";
+            outputText = colorResult.dominantColors?.length ? `Colores dominantes: ${colorResult.dominantColors.join(', ')}` : "No se pudieron identificar colores.";
             break;
         case "question":
             if (!question) {
-                const msg = "Please provide a question.";
-                toast({ title: "No Question", description: msg, variant: "destructive" });
+                const msg = "Por favor proporciona una pregunta.";
+                toast({ title: "Sin pregunta", description: msg, variant: "destructive" });
                 speakText(msg);
                 setIsProcessing(false);
                 setAnalysisResult(null);
@@ -207,18 +207,18 @@ export default function SightGuide() {
             // Pass descriptionPreference to describeImage flow for questions too
             // IMPORTANT: You'll need to update your `describeImage` flow.
             result = await describeImage({ photoDataUri, question, detailPreference: descriptionPreference });
-            outputText = `Answer: ${result.description}`;
+            outputText = `Respuesta: ${result.description}`;
             break;
         default: throw new Error("Invalid analysis type");
         }
         setAnalysisResult(outputText);
         speakText(outputText);
     } catch (error: any) {
-        let detailMessage = 'Unknown error';
+        let detailMessage = 'Error desconocido';
         try { if (error.message) { try { const parsedError = JSON.parse(error.message); detailMessage = parsedError.details || error.message; } catch { detailMessage = error.message; } } } catch {}
-        const errorMessage = `Analysis failed: ${detailMessage}`;
+        const errorMessage = `El análisis falló: ${detailMessage}`;
         setAnalysisResult(errorMessage);
-        toast({ title: "Analysis Error", description: errorMessage, variant: "destructive" });
+        toast({ title: "Error de análisis", description: errorMessage, variant: "destructive" });
         speakText(errorMessage);
     } finally {
         setIsProcessing(false);

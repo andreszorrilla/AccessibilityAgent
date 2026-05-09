@@ -41,7 +41,8 @@ const DescribeImagePromptInputSchema = DescribeImageInputSchema.extend({
 // TODO: Replacing describeImage
 
 export async function describeImage(input: DescribeImageInput): Promise<DescribeImageOutput> {
-  return describeImageFlow(input);
+  return { description: "CODIGO AUN IMPLEMENTADO"};
+  // return describeImageFlow(input);
 }
 
 

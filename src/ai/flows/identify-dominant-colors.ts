@@ -25,7 +25,8 @@ const IdentifyDominantColorsOutputSchema = z.object({
 export type IdentifyDominantColorsOutput = z.infer<typeof IdentifyDominantColorsOutputSchema>;
 
 export async function identifyDominantColors(input: IdentifyDominantColorsInput): Promise<IdentifyDominantColorsOutput> {
-  return identifyDominantColorsFlow(input);
+  return { dominantColors: ["LA IMPLEMENTACION PARA DETERMINAR COLORES AUN HA SIDO IMPLEMENETADA"]};
+  // return identifyDominantColorsFlow(input);
 }
 
 const prompt = ai.definePrompt({
