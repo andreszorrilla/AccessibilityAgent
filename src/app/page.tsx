@@ -30,6 +30,7 @@ export default function SightGuide() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [customQuestion, setCustomQuestion] = useState<string>("");
   const [descriptionPreference, setDescriptionPreference] = useState<DescriptionPreference>("concise"); // New state for description preference
+  const [isCameraActive, setIsCameraActive] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -59,12 +60,12 @@ export default function SightGuide() {
           console.log(`Speech synthesis ${event.error} (expected).`);
       } else {
           console.error('Speech synthesis error:', event.error);
-          toast({ title: "Error de voz", description: `No se pudo reproducir la voz. Error: ${event.error}`, variant: "destructive" });
+          toast({ title: "Speech Error", description: `Could not speak. Error: ${event.error}`, variant: "destructive" });
       }
       setIsSpeaking(false);
     };
     utteranceRef.current = utterance;
-    setTimeout(() => window.speechSynthesis.speak(utterance), 50);
+    setTimeout(() => window.speechSynthesis.speak(utterance), 100);
   }, [toast]);
 
   const stopSpeaking = useCallback(() => {
@@ -97,16 +98,17 @@ export default function SightGuide() {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.style.display = "block";
+        setIsCameraActive(true);
         setImageSrc(null);
         setImageFile(null);
         setAnalysisResult(null);
         setCustomQuestion("");
-        speakText("Cámara iniciada. Di 'tomar foto' o presiona el botón de captura.");
+        speakText("Camara Iniciada. Di 'Tomar foto' or presion el boton de capturar.");
       }
     } catch (err) {
       console.error("Error accessing camera:", err);
-       toast({ title: "Error de cámara", description: "No se pudo acceder a la cámara.", variant: "destructive" });
-       speakText("Error: no se pudo acceder a la cámara.");
+       toast({ title: "Camera Error", description: "Could not access camera.", variant: "destructive" });
+       speakText("Error: Could not access camera.");
     }
   };
 
@@ -129,11 +131,12 @@ export default function SightGuide() {
         video.style.display = "none";
         setAnalysisResult(null);
         setCustomQuestion("");
+        setIsCameraActive(false);
         if (!isListening) speakText("Foto tomada.");
       }
     } else {
-        if (!isListening) speakText("La cámara no está activa para tomar una foto.");
-        toast({ title: "Cámara no activa", description: "Primero inicia la cámara.", variant: "destructive" });
+        if (!isListening) speakText("Camera no activa para tomar foto."); // Corrected feedback
+        toast({ title: "Camera no activa para tomar foto", description: "Start camera first.", variant: "destructive" });
     }
   };
 
@@ -148,9 +151,9 @@ export default function SightGuide() {
                    reader.readAsDataURL(imageFile);
                });
            } catch (error) {
-               const msg = "No se pudo leer el archivo de imagen.";
+               const msg = "Failed to read image file.";
                setAnalysisResult(msg);
-               toast({ title: "Error de archivo", description: msg, variant: "destructive" });
+               toast({ title: "File Error", description: msg, variant: "destructive" });
                speakText(msg);
                return null; // Return null directly here
            }
@@ -165,8 +168,8 @@ export default function SightGuide() {
      const photoDataUri = await getImageDataUri();
      if (!photoDataUri) {
         if (!imageSrc && !imageFile) {
-            const msg = "Por favor selecciona o captura una imagen primero.";
-            toast({ title: "Sin imagen", description: msg, variant: "destructive" });
+            const msg = "Please select or capture an image first.";
+            toast({ title: "No Image", description: msg, variant: "destructive" });
             speakText(msg);
         }
         setAnalysisResult(null);
@@ -179,26 +182,25 @@ export default function SightGuide() {
         switch (type) {
 
         // REPLACE ME PART 2: DESCRIBE IMAGE
-
         case "description":
           result = await describeImage({ 
             photoDataUri, 
             question, 
             detailPreference: descriptionPreference 
           });
-          outputText = question ? `Respuesta: ${result.description}` : `Descripción: ${result.description}`;
+          outputText = question ? `Answer: ${result.description}` : `Description: ${result.description}`;
           break;
 
         // REPLACE ME PART 3: READ TEXT
 
         case "colors":
             const colorResult = await identifyDominantColors({ photoDataUri });
-            outputText = colorResult.dominantColors?.length ? `Colores dominantes: ${colorResult.dominantColors.join(', ')}` : "No se pudieron identificar colores.";
+            outputText = colorResult.dominantColors?.length ? `Dominant Colors: ${colorResult.dominantColors.join(', ')}` : "Could not identify colors.";
             break;
         case "question":
             if (!question) {
-                const msg = "Por favor proporciona una pregunta.";
-                toast({ title: "Sin pregunta", description: msg, variant: "destructive" });
+                const msg = "Please provide a question.";
+                toast({ title: "No Question", description: msg, variant: "destructive" });
                 speakText(msg);
                 setIsProcessing(false);
                 setAnalysisResult(null);
@@ -207,18 +209,18 @@ export default function SightGuide() {
             // Pass descriptionPreference to describeImage flow for questions too
             // IMPORTANT: You'll need to update your `describeImage` flow.
             result = await describeImage({ photoDataUri, question, detailPreference: descriptionPreference });
-            outputText = `Respuesta: ${result.description}`;
+            outputText = `Answer: ${result.description}`;
             break;
         default: throw new Error("Invalid analysis type");
         }
         setAnalysisResult(outputText);
         speakText(outputText);
     } catch (error: any) {
-        let detailMessage = 'Error desconocido';
+        let detailMessage = 'Unknown error';
         try { if (error.message) { try { const parsedError = JSON.parse(error.message); detailMessage = parsedError.details || error.message; } catch { detailMessage = error.message; } } } catch {}
-        const errorMessage = `El análisis falló: ${detailMessage}`;
+        const errorMessage = `Analysis failed: ${detailMessage}`;
         setAnalysisResult(errorMessage);
-        toast({ title: "Error de análisis", description: errorMessage, variant: "destructive" });
+        toast({ title: "Analysis Error", description: errorMessage, variant: "destructive" });
         speakText(errorMessage);
     } finally {
         setIsProcessing(false);
@@ -237,16 +239,7 @@ export default function SightGuide() {
         console.log("Checking for typos in command:", rawCommand);
 
         // REPLACE ME PART 2: add typoResult here
-
-        const typoResult = await checkTypo({ text: rawCommand });
-        if (typoResult && typoResult.correctedText && typoResult.correctedText.trim().length > 0) {
-            const originalTrimmedLower = rawCommand.trim().toLowerCase();
-            const correctedTrimmedLower = typoResult.correctedText.trim().toLowerCase();
-            if (correctedTrimmedLower !== originalTrimmedLower) {
-                commandToProcess = typoResult.correctedText;
-                typoCorrectionAnnouncement = `I think you said: ${commandToProcess}. `;
-            }
-        }
+        
     } catch (typoError: any) {
         console.error("Error checking for typos:", typoError);
         toast({ title: "Typo Check Error", description: "Proceeding with original command.", variant: "default" });
@@ -260,8 +253,6 @@ export default function SightGuide() {
     let intent: IntentCategory = "Unknown";
     try {
         // REPLACE ME PART 1: add classificationResult
-        console.log(`Recibiendo "${commandToProcess}"`);
-
         const classificationResult = await classifyIntentFlow({ userQuery: commandToProcess });
         intent = classificationResult.intent as IntentCategory;
         console.log(`Classified intent for "${commandToProcess}": ${intent}`);
@@ -277,10 +268,10 @@ export default function SightGuide() {
     switch (intent) {
         case "TakePicture":
             if (videoRef.current?.srcObject) {
-              speakText("Taking picture now.");
+              speakText("Tomando foto ahora.");
               takePicture();
             } else {
-              speakText("Starting camera. Say 'take picture' again or press the button.");
+              speakText("Iniciando camara. Puedes decir 'tomar foto' o presionar el buton.");
               await startCamera(); // Make sure camera is started before returning
             }
             setIsProcessing(false); // Moved here to ensure it's set after action
@@ -292,7 +283,7 @@ export default function SightGuide() {
             break;
 
         case "SelectImage":
-            speakText("Okay, please select an image file.");
+            speakText("Ok, por favor elige una foto del archivo.");
             fileInputRef.current?.click();
             setIsProcessing(false);
             break;
@@ -305,15 +296,15 @@ export default function SightGuide() {
 
         case "SetDescriptionDetailed":
             setDescriptionPreference("detailed");
-            speakText("Okay, image descriptions will now be detailed.");
-            setAnalysisResult("Description preference set to detailed.");
+            speakText("Okay, las descripciones de la image seran detalladas.");
+            setAnalysisResult("Preferencia de descripcion pasa a ser detallada.");
             setIsProcessing(false);
             break;
 
         case "SetDescriptionConcise":
             setDescriptionPreference("concise");
-            speakText("Okay, image descriptions will now be concise.");
-            setAnalysisResult("Description preference set to concise.");
+            speakText("Okay, las descripciones de la image seran concisas.");
+            setAnalysisResult("Preferencia de descripcion pasa a ser concisa.");
             setIsProcessing(false);
             break;
 
@@ -323,15 +314,15 @@ export default function SightGuide() {
         case "IdentifyColorsInImage":
             const hasImageNow = !!imageSrc || !!imageFile;
             if (!hasImageNow) {
-                speakText("There's no image to analyze. Please add or capture an image first.");
-                toast({ title: "No Image", description: "Add an image for analysis.", variant: "destructive" });
+                speakText("No hay imagen para procesar. Por favor agrega o captura una imagen.");
+                toast({ title: "No hay Imagen", description: "agrega o captura una imagen.", variant: "destructive" });
                 setAnalysisResult(null);
                 setIsProcessing(false);
                 return;
             }
 
-            setAnalysisResult("Analyzing image...");
-            speakText("Okay, looking at the image...");
+            setAnalysisResult("Analizando imagen...");
+            speakText("Okay, analizando la imagen...");
 
             try {
                 const photoDataUri = await getImageDataUri();
@@ -360,7 +351,7 @@ export default function SightGuide() {
                         break;
                     case "ReadTextInImage":
                         const textResult = await readTextInImage({ photoDataUri });
-                        outputText = textResult.text ? `Texto encontrado: ${textResult.text}` : "No hay texto en la imagen.";
+                        outputText = textResult.text ? `Texto Encontrado: ${textResult.text}` : "No hay texto encontrado en la imagen.";
                         break;
                     case "IdentifyColorsInImage":
                         const colorResult = await identifyDominantColors({ photoDataUri });
@@ -372,11 +363,11 @@ export default function SightGuide() {
 
             } catch (analysisError: any) {
                 console.error("Error during image analysis:", analysisError);
-                let detailMessage = 'An error occurred during analysis.';
+                let detailMessage = 'Un error ha ocurrido durante el analisis.';
                 try { if (analysisError.message) { try { const parsedError = JSON.parse(analysisError.message); detailMessage = parsedError.details || parsedError.error?.message || analysisError.message; } catch { detailMessage = analysisError.message; } } } catch {}
-                const errorMessage = `Analysis failed: ${detailMessage}`;
+                const errorMessage = `Error en el analisis: ${detailMessage}`;
                 setAnalysisResult(errorMessage);
-                toast({ title: "Analysis Error", description: errorMessage, variant: "destructive" });
+                toast({ title: "Error en el analisis", description: errorMessage, variant: "destructive" });
                 speakText(errorMessage);
             } finally {
                 setIsProcessing(false);
@@ -387,7 +378,6 @@ export default function SightGuide() {
             // speakText("I can help you understand images. For example, you can ask me to describe an image, read text from it, or change how detailed the descriptions are. What would you like to do?");
             // setAnalysisResult("How can I assist you with an image today? You can also say 'make descriptions detailed' or 'make descriptions concise'.");
             // setIsProcessing(false);
-
             speakText(`Puedo ayudarte a entender imágenes. ${capabilitiesMessage} ¿Qué te gustaría hacer?`);
             setAnalysisResult(
               `¿Cómo puedo ayudarte con una imagen hoy? También puedes decir 'hacer descripciones más detalladas' o 'hacer descripciones más concisas'.`
@@ -451,7 +441,7 @@ export default function SightGuide() {
     };
 
     const handleError = (event: SpeechRecognitionErrorEvent) => {
-      console.error("Speech recognition error:", event.error, "Message:", event.message);
+      // console.error("Speech recognition error:", event.error, "Message:", event.message);
       setIsAttemptingStart(false); // Ensure this is reset
 
       let errorMessage = "Speech recognition error.";
@@ -581,7 +571,7 @@ export default function SightGuide() {
         if (recognition) {
             recognition.abort(); // This will trigger onEnd
         }
-        speakText("Stopped listening.");
+        speakText("Audio detenido.");
     } else {
         stopSpeaking(); // Stop any ongoing TTS
         console.log("Attempting to start listening via toggle.");
@@ -663,8 +653,8 @@ export default function SightGuide() {
     <div className="flex flex-col items-center justify-center min-h-screen p-4 md:p-8 bg-background text-foreground">
       <header className="mb-8 text-center">
         <h1 className="text-4xl font-bold text-primary mb-2">SightGuide AI</h1>
-        <p className="text-lg text-muted-foreground">Your AI voice assistant for understanding images.</p>
-        <p className="text-sm text-muted-foreground mt-1">Description preference: <span className="font-semibold">{descriptionPreference}</span></p>
+        <p className="text-lg text-muted-foreground">Tu asistente de voz con IA para entender imágenes.</p>
+        <p className="text-sm text-muted-foreground mt-1">  Preferencia de descripción: <span className="font-semibold">{descriptionPreference}</span></p>
       </header>
 
       <main className="w-full max-w-2xl space-y-6">
@@ -701,7 +691,7 @@ export default function SightGuide() {
         {/* Controls Card */}
         <Card className="shadow-lg border-2 border-border rounded-lg">
          <CardHeader>
-           <CardTitle className="text-xl text-center">Controls</CardTitle>
+           <CardTitle className="text-xl text-center">Controles</CardTitle>
          </CardHeader>
           <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4">
              <input
@@ -722,18 +712,18 @@ export default function SightGuide() {
               >
                 <Label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center justify-center w-full h-full p-2 text-center">
                     <FileImage className="mb-1" size={28} />
-                    Select Image
+                    Selecionar Imagen
                 </Label>
               </Button>
              <Button
-                onClick={videoRef.current?.srcObject ? takePicture : startCamera}
-                aria-label={videoRef.current?.srcObject ? "Take picture from camera" : "Start camera"}
+                onClick={isCameraActive ? takePicture : startCamera}
+                aria-label={isCameraActive ? "Tomar foto de la camara" : "Iniciar camera"}
                 size="lg"
                  className="flex flex-col items-center justify-center h-24 text-lg bg-accent hover:bg-accent/90 text-accent-foreground"
                  disabled={isProcessing || isAttemptingStart || isListening}
               >
                  <Camera className="mb-1" size={28} />
-                {videoRef.current?.srcObject ? "Take Picture" : "Use Camera"}
+                {isCameraActive ? "Tomar foto" : "Usar Camara"}
               </Button>
              <Button
                 onClick={toggleListening}
@@ -744,7 +734,7 @@ export default function SightGuide() {
                  disabled={isProcessing && !isListening && !isAttemptingStart}
               >
                  <Mic className="mb-1" size={28} />
-                {isAttemptingStart ? "Starting..." : (isListening ? "Stop Listening" : "Start Listening")}
+                {isAttemptingStart ? "Empezando..." : (isListening ? "Dejar de escuchar" : "Empezar a escuchar")}
               </Button>
           </CardContent>
         </Card>
@@ -756,26 +746,26 @@ export default function SightGuide() {
              </CardHeader>
             <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4">
               <Button onClick={() => handleAnalyze("description")} aria-label="Describe the image content" size="lg" className="flex flex-col items-center justify-center h-20 text-base" disabled={isProcessing || isListening || isAttemptingStart}>
-                <HelpCircle className="mb-1" size={24} /> Describe
+                <HelpCircle className="mb-1" size={24} /> Describir
               </Button>
               <Button onClick={() => handleAnalyze("text")} aria-label="Read text found in the image" size="lg" className="flex flex-col items-center justify-center h-20 text-base" disabled={isProcessing || isListening || isAttemptingStart}>
-                 <FileText className="mb-1" size={24} /> Read Text
+                 <FileText className="mb-1" size={24} /> Leer texto
               </Button>
               <Button onClick={() => handleAnalyze("colors")} aria-label="Identify dominant colors in the image" size="lg" className="flex flex-col items-center justify-center h-20 text-base" disabled={isProcessing || isListening || isAttemptingStart}>
-                <Palette className="mb-1" size={24} /> Colors
+                <Palette className="mb-1" size={24} /> Colores
               </Button>
               <Button
                 onClick={() => {
-                    const message = "To ask a question about the image, please use voice commands by pressing 'Start Listening'.";
+                    const message = "Para hacer una pregunta sobre la imagen, usa los comandos de voz presionando 'Empezar a escuchar'.";
                     speakText(message);
-                    toast({ title: "Use Voice Command", description: message, variant: "default" });
+                    toast({ title: "Usar comando de voz", description: message, variant: "default" });
                 }}
                 aria-label="Ask a specific question using voice command"
                 size="lg"
                 className="flex flex-col items-center justify-center h-20 text-base"
                 disabled={isProcessing || isListening || isAttemptingStart}
               >
-                <HelpCircle className="mb-1" size={24} /> Ask (Voice)
+                <HelpCircle className="mb-1" size={24} /> Preguntar (Voz)
               </Button>
             </CardContent>
           </Card>
@@ -813,7 +803,7 @@ export default function SightGuide() {
 
        <footer className="mt-12 text-center text-muted-foreground text-sm px-4">
           <p>Built with Firebase & Genkit.</p>
-           <p className="mt-1">Use the <Mic size={16} className="inline align-text-bottom"/> button to start/stop. Speak commands like "describe image in detail" or "make description concise".</p>
+          <p className="mt-1">  Usa el botón <Mic size={16} className="inline align-text-bottom"/> para iniciar/detener. Di comandos como "describe la imagen en detalle" o "haz la descripción concisa".</p>
        </footer>
     </div>
   );
