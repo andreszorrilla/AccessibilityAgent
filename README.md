@@ -1,19 +1,47 @@
-In this tutorial, you'll build ClarityCam, a hands-free, voice-driven AI agent that can see the world and explain it to you. While ClarityCam is designed with accessibility at its core—providing a powerful tool for blind and low-vision users—the principles you'll learn are essential for creating any modern, general-purpose voice application.
+# 👁️ ClarityCam: AccessibilityAgent
 
+**ClarityCam** es un agente de IA multimodal, manos libres y activado por voz. Este proyecto se basa en la filosofía de **Interfaz Nativamente Adaptativa (NAI)**, donde la accesibilidad es el pilar fundamental del diseño y no una característica secundaria.
 
-This project is built on a powerful design philosophy called the [**Natively Adaptive Interface** (NAI)](https://developers.devsite.corp.google.com/natively-adaptive-interfaces). Instead of treating accessibility as an afterthought, NAI makes it the foundation. With this approach, the AI agent is the interface—it adapts to different users, handles multimodal input like voice and vision, and proactively guides people based on their unique needs.
+El agente actúa como la interfaz misma, adaptándose a las necesidades del usuario, procesando entradas de voz y visión de forma proactiva para guiar a personas con discapacidad visual.
 
+---
 
-Through this repo, you will be able to:
+## 🚀 Características y Aprendizajes
+*   **Diseño NAI (Natively Adaptive Interface):** Creación de sistemas de IA que ofrecen experiencias equivalentes para todos los usuarios por defecto.
+*   **Clasificador de Intención:** Traducción de comandos de voz en lenguaje natural a acciones estructuradas.
+*   **Contexto Conversacional:** Implementación de memoria a corto plazo para entender preguntas de seguimiento (ej. *"¿De qué color es eso?"*).
+*   **Ingeniería de Prompts Multimodales:** Uso de **Google Gemini** para análisis de imágenes preciso y confiable.
+*   **Sistema Multi-Agente:** Orquestación de agentes especializados en procesamiento de voz, análisis visual y síntesis de habla.
 
-- **Design with Accessibility as the Default**: Apply Natively Adaptive Interface (NAI) principles to create AI systems that provide equivalent experiences for all users.
+## 🛠️ Stack Tecnológico
+*   **IA:** [Google Gemini](https://google.com) (Vertex AI).
+*   **Frontend & Lógica:** [Next.js](https://nextjs.org) con TypeScript.
+*   **Infraestructura:** Google Cloud Platform (Cloud Run, Artifact Registry, Secret Manager).
 
-- **Classify User Intent**: Build a robust intent classifier that translates natural language commands into structured actions for your agent.
+## 📂 Estructura del Proyecto
+Los archivos principales para entender y modificar la lógica son:
+- `src/app/page.tsx`: La interfaz de usuario principal.
+- `src/ai/flows/`: Lógica central de los flujos de IA.
+- `src/ai/intent-classifier.ts`: Definición de prompts y clasificación de intenciones.
 
-- **Maintain Conversational Context**: Implement short-term memory to enable your agent to understand follow-up questions and referential commands (e.g., "What color is it?").
+## 📦 Configuración Rápida
+1.  **Clonar:** `git clone https://github.com`
+2.  **Variables de Entorno:** Crea un `.env` con `GOOGLE_GENAI_API_KEY="TU_API_KEY"`.
+3.  **Instalar y Correr:**
+    ```bash
+    npm install
+    npm run dev
+    ```
 
-- **Engineer Effective Prompts**: Craft focused, context-rich prompts for a multimodal model like Gemini to ensure accurate and reliable image analysis.
+---
 
-- **Handle Ambiguity and Guide the User**: Design graceful error handling for out-of-scope requests and proactively onboard users to build trust and confidence.
+## ✍️ Créditos y Reconocimiento
+Este proyecto es un **fork** desarrollado a partir del trabajo original de **cuppibla**.
 
-- **Orchestrate a Multi-Agent System**: Structure your application using a collection of specialized agents that collaborate to handle complex tasks like voice processing, analysis, and speech synthesis.
+*   **Repositorio Original:** [cuppibla/AccessibilityAgent](https://github.com/cuppibla/AccessibilityAgent)
+*   **Autor:** [cuppibla](https://github.com/cuppibla)
+
+Agradecemos al autor original por la base técnica y la visión sobre interfaces accesibles que permitieron este desarrollo.
+
+## 📄 Licencia
+Este proyecto mantiene la licencia **Apache-2.0** del repositorio original.
